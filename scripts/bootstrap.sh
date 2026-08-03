@@ -65,6 +65,29 @@ import re
 
 root = Path.cwd()
 
+# Android Gradle 9 compatibility for Flutter 3.44.x.
+gradle_properties = root / 'android/gradle.properties'
+if gradle_properties.exists():
+    properties_text = gradle_properties.read_text()
+    property_lines = properties_text.splitlines()
+    required_properties = {
+        'android.newDsl': 'false',
+        'android.builtInKotlin': 'false',
+    }
+    for property_name, property_value in required_properties.items():
+        replacement = f'{property_name}={property_value}'
+        matching_indexes = [
+            index for index, line in enumerate(property_lines)
+            if line.strip().startswith(f'{property_name}=')
+        ]
+        if matching_indexes:
+            property_lines[matching_indexes[0]] = replacement
+            for duplicate_index in reversed(matching_indexes[1:]):
+                del property_lines[duplicate_index]
+        else:
+            property_lines.append(replacement)
+    gradle_properties.write_text('\n'.join(property_lines).rstrip() + '\n')
+
 # Android: minimum Android 7/API 24, portrait, and release signing support.
 gradle = root / 'android/app/build.gradle.kts'
 if gradle.exists():
@@ -79,7 +102,6 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
 ''' + google_services_plugin + '''}
 
@@ -97,10 +119,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
@@ -130,6 +148,12 @@ android {
                 signingConfigs.getByName("debug")
             }
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
