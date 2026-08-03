@@ -1,0 +1,61 @@
+{
+  "rules": {
+    "crossmateNativeRooms": {
+      ".indexOn": ["expiresAt"],
+      "$room": {
+        ".read": "auth != null",
+        ".write": "auth != null && newData.exists() && ((!data.exists() && newData.child('players/p1/uid').val() == auth.uid) || (data.exists() && (data.child('players/p1/uid').val() == auth.uid || data.child('players/p2/uid').val() == auth.uid || (!data.child('players/p2/uid').exists() && newData.child('players/p2/uid').val() == auth.uid))))",
+        ".validate": "newData.hasChildren(['version', 'createdAt', 'expiresAt', 'players', 'state']) && newData.child('players/p1').hasChildren(['uid', 'joinedAt']) && (!data.child('players/p2').exists() || newData.child('players/p2').exists()) && (!newData.child('players/p2').exists() || (newData.child('players/p2').hasChildren(['uid', 'joinedAt']) && newData.child('players/p2/uid').val() != newData.child('players/p1/uid').val()))",
+        "version": {
+          ".validate": "newData.isString() && (!data.exists() || newData.val() == data.val())"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && (!data.exists() || newData.val() == data.val())"
+        },
+        "expiresAt": {
+          ".validate": "newData.isNumber() && (!data.exists() || newData.val() == data.val())"
+        },
+        "players": {
+          "p1": {
+            ".validate": "newData.hasChildren(['uid', 'joinedAt'])",
+            "uid": {
+              ".validate": "newData.isString() && (!data.exists() || newData.val() == data.val())"
+            },
+            "joinedAt": {
+              ".validate": "newData.isNumber() && (!data.exists() || newData.val() == data.val())"
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
+          "p2": {
+            ".validate": "newData.hasChildren(['uid', 'joinedAt'])",
+            "uid": {
+              ".validate": "newData.isString() && ((!data.exists() && newData.val() == auth.uid) || (data.exists() && newData.val() == data.val()))"
+            },
+            "joinedAt": {
+              ".validate": "newData.isNumber() && (!data.exists() || newData.val() == data.val())"
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "state": {
+          ".validate": "newData.hasChildren(['pieces', 'currentPlayer', 'scores', 'moveNumber'])"
+        },
+        "presence": {
+          "$uid": {
+            ".validate": "$uid == auth.uid && (newData.val() == true || !newData.exists())"
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

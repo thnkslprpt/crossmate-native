@@ -1,0 +1,30 @@
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+.idea/
+.vscode/
+*.iml
+*.log
+
+# Generated platform folders are intentionally committed after bootstrap.
+android/.gradle/
+android/local.properties
+android/key.properties
+android/app/google-services.json
+lib/firebase_options.dart
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Runner/GoogleService-Info.plist
+
+# Signing material must never be committed.
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
