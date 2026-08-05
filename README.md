@@ -125,7 +125,7 @@ Local two-player and robot modes do not need Firebase and should work offline.
 
 ## 5. Configure online play with Firebase
 
-You can use a new Firebase project or the existing Crossmate Firebase project. The app uses a separate database node named `crossmateNativeRooms`, so it does not overwrite browser-game rooms.
+The native app uses `crossmateNativeRooms`, while the browser game uses `crossmateRooms`. Their room data stays isolated, so both can safely use the same Firebase project. Realtime Database rules are deployed as one project-wide ruleset; for that reason `firebase/database.rules.json` deliberately preserves both nodes. Do not replace it with a native-only or browser-only rules file.
 
 First install Node.js/npm if needed. Then run:
 
@@ -133,7 +133,7 @@ First install Node.js/npm if needed. Then run:
 ./scripts/configure_firebase.sh YOUR_FIREBASE_PROJECT_ID
 ```
 
-The script installs Firebase CLI and FlutterFire CLI, logs in, configures every host project currently present, and deploys `firebase/database.rules.json`. On Ubuntu it configures Android. Run it again on the Mac after generating the iOS host so iOS is registered with the same `com.gidigames.crossmate` bundle identifier.
+The script installs Firebase CLI and FlutterFire CLI, logs in, configures every host project currently present, verifies that the rules file contains both Crossmate room nodes, and deploys the shared `firebase/database.rules.json`. On Ubuntu it configures Android. Run it again on the Mac after generating the iOS host so iOS is registered with the same `com.gidigames.crossmate` bundle identifier.
 
 In Firebase Console, also enable:
 

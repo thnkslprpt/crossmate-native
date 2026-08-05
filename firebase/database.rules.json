@@ -1,7 +1,19 @@
 {
   "rules": {
+    "crossmateRooms": {
+      ".indexOn": [
+        "expiresAt"
+      ],
+      "$room": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('players/p1/uid').val() === auth.uid) || data.child('players/p1/uid').val() === auth.uid || data.child('players/p2/uid').val() === auth.uid || (!data.child('players/p2').exists() && newData.child('players/p2/uid').val() === auth.uid))",
+        ".validate": "newData.hasChildren(['players','state','expiresAt']) && newData.child('expiresAt').isNumber()"
+      }
+    },
     "crossmateNativeRooms": {
-      ".indexOn": ["expiresAt"],
+      ".indexOn": [
+        "expiresAt"
+      ],
       "$room": {
         ".read": "auth != null",
         ".write": "auth != null && newData.exists() && ((!data.exists() && newData.child('players/p1/uid').val() == auth.uid) || (data.exists() && (data.child('players/p1/uid').val() == auth.uid || data.child('players/p2/uid').val() == auth.uid || (!data.child('players/p2/uid').exists() && newData.child('players/p2/uid').val() == auth.uid))))",
