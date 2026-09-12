@@ -91,7 +91,11 @@ class _AiSearch {
       final child = _advanceForSearch(state, move);
       final instant =
           _engine.crossFor(child, _engine.otherPlayer(rootPlayer)) == null;
-      final centre = 8 - ((move.toRow - 4).abs() + (move.toCol - 4).abs());
+      final centre =
+          state.boardSize -
+          1 -
+          ((move.toRow - state.boardSize ~/ 2).abs() +
+              (move.toCol - state.boardSize ~/ 2).abs());
       final checkBonus =
           !instant && _engine.isInCheck(child, _engine.otherPlayer(rootPlayer))
           ? 180
@@ -192,16 +196,13 @@ class _AiSearch {
     final enemyCross = _engine.crossFor(state, _engine.otherPlayer(rootPlayer));
     if (rootCross == null) return -mateScore + ply;
     if (enemyCross == null) return mateScore - ply;
+    if (knownMoves.isEmpty) {
+      return state.currentPlayer == rootPlayer
+          ? -mateScore + ply
+          : mateScore - ply;
+    }
     if (_engine.onlyCrossesRemain(state) ||
         state.halfmoveClock >= CrossmateEngine.noCaptureLimit) {
-      return 0;
-    }
-    if (knownMoves.isEmpty) {
-      if (_engine.isInCheck(state, state.currentPlayer)) {
-        return state.currentPlayer == rootPlayer
-            ? -mateScore + ply
-            : mateScore - ply;
-      }
       return 0;
     }
     return null;
@@ -222,15 +223,21 @@ class _AiSearch {
       if (!piece.alive) continue;
       final sign = piece.player == rootPlayer ? 1.0 : -1.0;
       score += sign * piece.type.aiValue;
-      final centre = 8 - ((piece.row - 4).abs() + (piece.col - 4).abs());
+      final centre =
+          state.boardSize -
+          1 -
+          ((piece.row - state.boardSize ~/ 2).abs() +
+              (piece.col - state.boardSize ~/ 2).abs());
       if (piece.type != PieceType.cross && piece.type != PieceType.diamond) {
         score += sign * centre * 3;
       }
       if (piece.type == PieceType.circle) {
-        final advancement = piece.player == 1 ? 7 - piece.row : piece.row - 1;
+        final advancement = piece.player == 1
+            ? state.boardSize - 2 - piece.row
+            : piece.row - 1;
         score += sign * advancement * 11;
       }
-      score += sign * _fieldInfluence(piece);
+      score += sign * _fieldInfluence(state, piece);
       if (piece.type != PieceType.cross) {
         final pseudo = min(
           18,
@@ -253,17 +260,22 @@ class _AiSearch {
     return score;
   }
 
-  int _fieldInfluence(Piece piece) {
+  int _fieldInfluence(GameState state, Piece piece) {
     if (piece.type != PieceType.diamond) return 0;
     var score = 0;
     for (var row = piece.row - 1; row <= piece.row + 1; row += 1) {
       for (var col = piece.col - 1; col <= piece.col + 1; col += 1) {
-        if (!_engine.inBounds(row, col) ||
+        if (!_engine.inBounds(state, row, col) ||
             (row == piece.row && col == piece.col)) {
           continue;
         }
         score += 3;
-        if (row >= 2 && row <= 6 && col >= 2 && col <= 6) score += 2;
+        if (row >= 2 &&
+            row <= state.boardSize - 3 &&
+            col >= 2 &&
+            col <= state.boardSize - 3) {
+          score += 2;
+        }
       }
     }
     return score;

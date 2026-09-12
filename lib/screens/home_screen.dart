@@ -36,7 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (await controller.settings.hasSeenTutorial()) return;
     await controller.settings.markTutorialSeen();
     if (!mounted) return;
+
     final palette = CrossmatePalette.from(controller.theme);
+
     await Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => RulesScreen(palette: palette)),
     );
@@ -45,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = CrossmatePalette.from(controller.theme);
+
     return AppBackground(
       palette: palette,
       child: Scaffold(
@@ -58,6 +61,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: <Widget>[
                   _HeroHeader(palette: palette),
                   const SizedBox(height: 22),
+                  const _SectionLabel('BOARD SIZE'),
+                  SegmentedButton<int>(
+                    segments: const <ButtonSegment<int>>[
+                      ButtonSegment(value: 7, label: Text('7×7 · Quick')),
+                      ButtonSegment(value: 9, label: Text('9×9 · Classic')),
+                    ],
+                    selected: <int>{controller.boardSize},
+                    onSelectionChanged: (values) async {
+                      await controller.setBoardSize(values.first);
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 18),
                   _ModeCard(
                     icon: Icons.smart_toy_rounded,
                     title: 'Play the robot',
@@ -73,7 +89,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     colors: <Color>[palette.playerTwo, palette.accent],
                     onTap: () async {
                       await controller.startLocal();
-                      if (context.mounted) _openGame(context);
+                      if (context.mounted) {
+                        _openGame(context);
+                      }
                     },
                   ),
                   const SizedBox(height: 12),
@@ -115,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'CROSSMATE NATIVE • 0.1.0',
+                    'CROSSMATE NATIVE • 0.1.1',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.45),
@@ -144,7 +162,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _showComputerSetup(BuildContext context) async {
     var difficulty = controller.aiDifficulty;
     var opening = await controller.settings.loadOpening();
+
     if (!context.mounted) return;
+
     final start = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -175,8 +195,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                     selected: <AiDifficulty>{difficulty},
-                    onSelectionChanged: (value) =>
-                        setModalState(() => difficulty = value.first),
+                    onSelectionChanged: (value) {
+                      setModalState(() {
+                        difficulty = value.first;
+                      });
+                    },
                   ),
                   const SizedBox(height: 20),
                   const _SectionLabel('WHO OPENS?'),
@@ -187,8 +210,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       DropdownMenuItem(value: 'computer', child: Text('Robot')),
                       DropdownMenuItem(value: 'random', child: Text('Random')),
                     ],
-                    onChanged: (value) =>
-                        setModalState(() => opening = value ?? 'human'),
+                    onChanged: (value) {
+                      setModalState(() {
+                        opening = value ?? 'human';
+                      });
+                    },
                   ),
                   const SizedBox(height: 22),
                   FilledButton.icon(
@@ -203,13 +229,19 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+
     if (start != true || !context.mounted) return;
+
     await controller.startComputer(difficulty: difficulty, opening: opening);
-    if (context.mounted) _openGame(context);
+
+    if (context.mounted) {
+      _openGame(context);
+    }
   }
 
   Future<void> _showOnlineSetup(BuildContext context) async {
     final codeController = TextEditingController();
+
     final choice = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -259,9 +291,19 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () {
-                  if (codeController.text.trim().length == 5) {
-                    Navigator.pop(sheetContext, codeController.text.trim());
+                  final code = codeController.text.trim();
+
+                  if (code.length != 5) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Enter the five-character room code.'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                    return;
                   }
+
+                  Navigator.pop(sheetContext, code);
                 },
                 icon: const Icon(Icons.login_rounded),
                 label: const Text('Join room'),
@@ -271,7 +313,9 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+
     codeController.dispose();
+
     if (choice == null || !context.mounted) return;
 
     try {
@@ -280,9 +324,13 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         await controller.joinOnlineRoom(choice);
       }
-      if (context.mounted) _openGame(context);
+
+      if (context.mounted) {
+        _openGame(context);
+      }
     } on OnlineUnavailableException catch (error) {
       if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(error.message),

@@ -609,7 +609,7 @@ class _ChoicePanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             const Text(
-              'Choose final direction',
+              'Turn in place',
               textAlign: TextAlign.center,
               style: TextStyle(fontWeight: FontWeight.w900),
             ),
@@ -671,20 +671,15 @@ class _ChoicePanel extends StatelessWidget {
   }
 
   static IconData _turnIcon(int turn) {
+    if (turn == 2) return Icons.u_turn_right_rounded;
     if (turn < 0) return Icons.turn_left_rounded;
     if (turn > 0) return Icons.turn_right_rounded;
     return Icons.arrow_upward_rounded;
   }
 
   static String _turnLabel(GameMove move) {
-    if (move.distance == 0) {
-      return move.turn < 0 ? 'Rotate left' : 'Rotate right';
-    }
-    if (move.preTurn < 0) return 'Turn left, then move';
-    if (move.preTurn > 0) return 'Turn right, then move';
-    if (move.turn < 0) return 'Move, then turn left';
-    if (move.turn > 0) return 'Move, then turn right';
-    return 'Keep facing';
+    if (move.turn == 2) return 'Rotate 180°';
+    return move.turn < 0 ? 'Rotate left' : 'Rotate right';
   }
 }
 

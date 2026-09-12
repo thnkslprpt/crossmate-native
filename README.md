@@ -2,7 +2,7 @@
 
 A from-scratch Flutter rewrite of Crossmate for Android and iOS. It does **not** use a WebView and it does not load the browser game at runtime. The board, rules engine, move validation, AI, history, themes, local play, and online-room client are written in Dart.
 
-The gameplay baseline is the current browser release, **Crossmate v1.7.3**. See [docs/SOURCE_PARITY.md](docs/SOURCE_PARITY.md) for the preserved rules and the deliberate first-beta differences.
+The gameplay baseline is the current browser release, **Crossmate v1.8.1**. See [docs/SOURCE_PARITY.md](docs/SOURCE_PARITY.md) for the preserved rules and the deliberate first-beta differences.
 See [docs/VALIDATION.md](docs/VALIDATION.md) for the checks completed before packaging and the build checks that must run on a Flutter-equipped machine.
 
 The reproducible toolchain target for this package is **Flutter 3.44.8 / Dart
@@ -11,9 +11,9 @@ The reproducible toolchain target for this package is **Flutter 3.44.8 / Dart
 ## Included in this source package
 
 - Native responsive Flutter interface for phones and tablets
-- 9×9 Crossmate rules engine
+- 7×7 and 9×9 Crossmate rules engine, matching browser v1.8.1
 - All five piece types and their current movement rules
-- Check, checkmate, stalemate, cross capture, repetition, no-capture, and only-crosses endings
+- Check, Crossmate (no legal move loses, even without check), cross capture, repetition, no-capture, and only-crosses endings
 - Circle far-edge sacrifice choice
 - Square and cross special diamond captures
 - Three offline AI levels running outside the UI isolate

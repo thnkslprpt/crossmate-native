@@ -8,6 +8,7 @@ import 'package:firebase_database/firebase_database.dart';
 import '../game/engine.dart';
 import '../game/models.dart';
 import 'settings_service.dart';
+import '../firebase_options.dart';
 
 class OnlineUnavailableException implements Exception {
   const OnlineUnavailableException(this.message);
@@ -75,7 +76,7 @@ class OnlineService {
   });
 
   static const roomLifetime = Duration(days: 10);
-  static const version = 'native-0.1.0';
+  static const version = 'native-0.1.1';
   static const roomRoot = 'crossmateNativeRooms';
   static const _alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -85,32 +86,79 @@ class OnlineService {
   FirebaseDatabase? _database;
   final Random _random = Random.secure();
 
-  bool get isConfigured => _auth != null && _database != null;
+  Future<void>? _initializeFuture;
+
+  bool get isConfigured =>
+      _auth != null && _database != null && _auth!.currentUser != null;
 
   Future<void> initialize() async {
     if (isConfigured) return;
+
+    final existing = _initializeFuture;
+    if (existing != null) {
+      await existing;
+      return;
+    }
+
+    final future = _initializeOnce();
+    _initializeFuture = future;
+
     try {
-      if (Firebase.apps.isEmpty) await Firebase.initializeApp();
-      _auth = FirebaseAuth.instance;
-      _database = FirebaseDatabase.instance;
-      if (_auth!.currentUser == null) {
-        await _auth!.signInAnonymously();
+      await future;
+    } finally {
+      if (identical(_initializeFuture, future)) {
+        _initializeFuture = null;
       }
+    }
+  }
+
+  Future<void> _initializeOnce() async {
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
+
+      _auth ??= FirebaseAuth.instance;
+      _database ??= FirebaseDatabase.instance;
+
+      if (_auth!.currentUser == null) {
+        final credential = await _auth!.signInAnonymously();
+
+        if (credential.user == null && _auth!.currentUser == null) {
+          throw const OnlineUnavailableException(
+            'Firebase anonymous sign-in returned no user.',
+          );
+        }
+      }
+    } on FirebaseAuthException catch (error) {
+      throw OnlineUnavailableException(
+        'Firebase sign-in failed (${error.code}): '
+        '${error.message ?? 'Unknown authentication error.'}',
+      );
+    } on FirebaseException catch (error) {
+      throw OnlineUnavailableException(
+        'Firebase connection failed (${error.code}): '
+        '${error.message ?? 'Unknown Firebase error.'}',
+      );
+    } on OnlineUnavailableException {
+      rethrow;
     } catch (error) {
       throw OnlineUnavailableException(
-        'Online play is not configured yet. Run the Firebase setup steps, then rebuild the app.\n\n$error',
+        'Online play could not connect to Firebase.\n\n$error',
       );
     }
   }
 
-  Future<OnlineRoomHandle> createRoom() async {
+  Future<OnlineRoomHandle> createRoom({int boardSize = 9}) async {
     await initialize();
     final uid = _requireUser().uid;
     for (var attempt = 0; attempt < 8; attempt += 1) {
       final code = _randomRoomCode();
       final ref = _database!.ref('$roomRoot/$code');
       final now = DateTime.now().millisecondsSinceEpoch;
-      final state = _engine.initialState();
+      final state = _engine.initialState(boardSize: boardSize);
       final result = await ref.runTransaction((currentValue) {
         if (currentValue != null) return Transaction.abort();
         return Transaction.success(<String, Object?>{
@@ -278,7 +326,10 @@ class OnlineService {
         currentValue,
       ) {
         if (currentValue == null) return Transaction.abort();
-        return Transaction.success(_engine.initialState().toJson());
+        final previous = GameState.fromJson(_map(currentValue));
+        return Transaction.success(
+          _engine.initialState(boardSize: previous.boardSize).toJson(),
+        );
       }, applyLocally: false);
       if (!result.committed) {
         throw const OnlineUnavailableException('Could not start the rematch.');
@@ -307,7 +358,7 @@ class OnlineService {
     final user = _auth?.currentUser;
     if (user == null) {
       throw const OnlineUnavailableException(
-        'Firebase anonymous sign-in failed.',
+        'Online sign-in is not ready. Please try again.',
       );
     }
     return user;

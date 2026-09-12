@@ -34,7 +34,7 @@ class _RulesScreenState extends State<RulesScreen> {
     _RuleSection(
       'Win the board',
       Icons.emoji_events_rounded,
-      'Capture the opponent’s cross, or checkmate it so no legal move can remove the threat. Captured pieces score points, but the cross decides the match.',
+      'Play on a quick 7×7 board with seven circles per player, or the classic 9×9 board with nine circles and two empty back-row spaces beside each cross. Capture the opponent’s cross, or leave the opponent with no legal move—even without check. Captured pieces score points, but points do not decide the match.',
     ),
     _RuleSection(
       'Circle • 1 point',
@@ -44,7 +44,7 @@ class _RulesScreenState extends State<RulesScreen> {
     _RuleSection(
       'Triangle • 3 points',
       Icons.change_history_rounded,
-      'Faces one direction. It may rotate in place, or move one or two squares forward with one optional 90° turn either before or after moving—not both. After movement it attacks the square directly in front.',
+      'Faces up, right, down or left. Each turn, choose one action: rotate in place to any other direction, move one empty square forward, or capture. Captures reach one square ahead, diagonally ahead-left or ahead-right, or two squares ahead if the first square is empty. A capture lands on the target without changing facing. Triangles can capture diamonds, ignoring only the target diamond’s own field. Moving, turning and capturing are separate actions.',
     ),
     _RuleSection(
       'Square • 5 points',
@@ -59,12 +59,12 @@ class _RulesScreenState extends State<RulesScreen> {
     _RuleSection(
       'Cross',
       Icons.close_rounded,
-      'Moves one, two or three squares in any straight or diagonal direction. It stops after its first capture. Protect it: capturing or checkmating the cross wins immediately.',
+      'Moves one, two or three squares in any straight or diagonal direction. It stops after its first capture. Protect it: capturing the cross or leaving its player with no legal move wins immediately.',
     ),
     _RuleSection(
       'Draws',
       Icons.handshake_rounded,
-      'The game is drawn by stalemate, three repetitions of the same full position, 60 consecutive player moves without a capture, or when only the two crosses remain.',
+      'The game is drawn by three repetitions of the same full position, 60 consecutive player moves without a capture, or when only the two crosses remain. Having no legal move is a loss, even without check, and takes priority over a draw.',
     ),
   ];
 

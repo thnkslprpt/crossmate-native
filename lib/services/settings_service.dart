@@ -11,6 +11,16 @@ class SettingsService {
   static const _openingKey = 'crossmate-ai-opening';
   static const _roomKey = 'crossmate-online-room';
 
+  Future<int> loadBoardSize() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('crossmate-board-size') == 7 ? 7 : 9;
+  }
+
+  Future<void> saveBoardSize(int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('crossmate-board-size', value);
+  }
+
   Future<BoardThemeId> loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString(_themeKey);

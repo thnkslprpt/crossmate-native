@@ -324,6 +324,7 @@ class GameResult {
 
 class GameState {
   const GameState({
+    this.boardSize = 9,
     required this.pieces,
     required this.currentPlayer,
     required this.halfmoveClock,
@@ -335,6 +336,7 @@ class GameState {
     required this.moveNumber,
   });
 
+  final int boardSize;
   final List<Piece> pieces;
   final int currentPlayer;
   final int halfmoveClock;
@@ -359,6 +361,7 @@ class GameState {
     int? moveNumber,
   }) {
     return GameState(
+      boardSize: boardSize,
       pieces: pieces ?? this.pieces,
       currentPlayer: currentPlayer ?? this.currentPlayer,
       halfmoveClock: halfmoveClock ?? this.halfmoveClock,
@@ -372,6 +375,7 @@ class GameState {
   }
 
   Map<String, Object?> toJson() => <String, Object?>{
+    'boardSize': boardSize,
     'pieces': pieces.map((piece) => piece.toJson()).toList(growable: false),
     'currentPlayer': currentPlayer,
     'halfmoveClock': halfmoveClock,
@@ -392,6 +396,7 @@ class GameState {
     final rawLastMove = _asMapOrNull(json['lastMove']);
 
     return GameState(
+      boardSize: _asInt(json['boardSize'], fallback: 9) == 7 ? 7 : 9,
       pieces: rawPieces
           .whereType<Map<Object?, Object?>>()
           .map(Piece.fromJson)

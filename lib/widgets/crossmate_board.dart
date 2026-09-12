@@ -85,24 +85,24 @@ class CrossmateBoard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final cellSize = constraints.maxWidth / CrossmateEngine.size;
+            final cellSize = constraints.maxWidth / state.boardSize;
             return Stack(
               children: <Widget>[
                 GridView.builder(
                   physics: const NeverScrollableScrollPhysics(),
                   padding: EdgeInsets.zero,
-                  itemCount: CrossmateEngine.size * CrossmateEngine.size,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: CrossmateEngine.size,
+                  itemCount: state.boardSize * state.boardSize,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: state.boardSize,
                   ),
                   itemBuilder: (context, index) {
-                    final visualRow = index ~/ CrossmateEngine.size;
-                    final visualCol = index % CrossmateEngine.size;
+                    final visualRow = index ~/ state.boardSize;
+                    final visualCol = index % state.boardSize;
                     final row = flipped
-                        ? CrossmateEngine.size - 1 - visualRow
+                        ? state.boardSize - 1 - visualRow
                         : visualRow;
                     final col = flipped
-                        ? CrossmateEngine.size - 1 - visualCol
+                        ? state.boardSize - 1 - visualCol
                         : visualCol;
                     final piece = engine.pieceAt(state, row, col);
                     final key = '$row:$col';
@@ -246,6 +246,7 @@ class CrossmateBoard extends StatelessWidget {
                 IgnorePointer(
                   child: CustomPaint(
                     painter: _BoardFramePainter(
+                      boardSize: state.boardSize,
                       color: palette.grid.withValues(alpha: 0.5),
                     ),
                     size: Size.infinite,
@@ -326,8 +327,7 @@ class CrossmateBoard extends StatelessWidget {
   }
 
   String _semanticLabel(Piece? piece, int row, int col, bool legal) {
-    final square =
-        '${String.fromCharCode(65 + col)}${CrossmateEngine.size - row}';
+    final square = '${String.fromCharCode(65 + col)}${state.boardSize - row}';
     if (piece == null) return '$square${legal ? ', legal destination' : ''}';
     return '$square, Player ${piece.player} ${piece.type.displayName}'
         '${legal ? ', legal destination' : ''}';
@@ -567,9 +567,10 @@ class _ForcefieldPainter extends CustomPainter {
 }
 
 class _BoardFramePainter extends CustomPainter {
-  const _BoardFramePainter({required this.color});
+  const _BoardFramePainter({required this.color, required this.boardSize});
 
   final Color color;
+  final int boardSize;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -577,8 +578,8 @@ class _BoardFramePainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    final step = size.width / CrossmateEngine.size;
-    for (var i = 1; i < CrossmateEngine.size; i += 1) {
+    final step = size.width / boardSize;
+    for (var i = 1; i < boardSize; i += 1) {
       final value = step * i;
       canvas.drawLine(Offset(value, 0), Offset(value, size.height), paint);
       canvas.drawLine(Offset(0, value), Offset(size.width, value), paint);
@@ -587,5 +588,5 @@ class _BoardFramePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _BoardFramePainter oldDelegate) =>
-      oldDelegate.color != color;
+      oldDelegate.color != color || oldDelegate.boardSize != boardSize;
 }

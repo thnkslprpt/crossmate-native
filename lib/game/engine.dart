@@ -12,7 +12,6 @@ class BoardVector {
 class CrossmateEngine {
   CrossmateEngine({Random? random}) : _random = random ?? Random();
 
-  static const int size = 9;
   static const int noCaptureLimit = 60;
   static const List<BoardVector> cardinalDirections = <BoardVector>[
     BoardVector(-1, 0),
@@ -44,12 +43,19 @@ class CrossmateEngine {
 
   final Random _random;
 
-  GameState initialState({int? startingPlayer}) {
+  GameState initialState({int? startingPlayer, int boardSize = 9}) {
+    if (boardSize != 7 && boardSize != 9) {
+      throw ArgumentError.value(boardSize, 'boardSize', 'Must be 7 or 9');
+    }
+    final size = boardSize;
+    final formation = size == 7
+        ? backRow.whereType<PieceType>().toList()
+        : backRow;
     final pieces = <Piece>[];
     var id = 1;
 
     for (var col = 0; col < size; col += 1) {
-      final backPiece = backRow[col];
+      final backPiece = formation[col];
       if (backPiece != null) {
         pieces.add(
           Piece(
@@ -104,6 +110,7 @@ class CrossmateEngine {
         ? startingPlayer!
         : (_random.nextBool() ? 1 : 2);
     var state = GameState(
+      boardSize: boardSize,
       pieces: pieces,
       currentPlayer: player,
       halfmoveClock: 0,
@@ -121,8 +128,8 @@ class CrossmateEngine {
 
   int otherPlayer(int player) => player == 1 ? 2 : 1;
 
-  bool inBounds(int row, int col) =>
-      row >= 0 && row < size && col >= 0 && col < size;
+  bool inBounds(GameState state, int row, int col) =>
+      row >= 0 && row < state.boardSize && col >= 0 && col < state.boardSize;
 
   int mod4(int value) => (value % 4 + 4) % 4;
 
@@ -318,7 +325,7 @@ class CrossmateEngine {
     );
     final reachedFarEdge =
         (piece.player == 1 && toRow == 0) ||
-        (piece.player == 2 && toRow == size - 1);
+        (piece.player == 2 && toRow == state.boardSize - 1);
     if (reachedFarEdge) {
       _addCircleArrivalMoves(state, piece, baseMove, moves);
     } else {
@@ -335,7 +342,7 @@ class CrossmateEngine {
     for (final step in const <int>[-1, 1]) {
       for (var distance = 1; distance <= 2; distance += 1) {
         final row = piece.row + step * distance;
-        if (!inBounds(row, piece.col)) break;
+        if (!inBounds(state, row, piece.col)) break;
         if (isEnemyForcefield(
           state,
           piece.player,
@@ -354,7 +361,7 @@ class CrossmateEngine {
     for (final dc in const <int>[-1, 1]) {
       final row = piece.row + forward;
       final col = piece.col + dc;
-      if (!inBounds(row, col) ||
+      if (!inBounds(state, row, col) ||
           isEnemyForcefield(
             state,
             piece.player,
@@ -387,66 +394,12 @@ class CrossmateEngine {
     for (final direction in allDirections) {
       final row = piece.row + direction.dr;
       final col = piece.col + direction.dc;
-      if (inBounds(row, col) && diamondCanCreateField(state, piece, row, col)) {
+      if (inBounds(state, row, col) &&
+          diamondCanCreateField(state, piece, row, col)) {
         moves.add(_move(piece, row, col, distance: 1));
       }
     }
     return moves;
-  }
-
-  void _addTriangleOption(
-    GameState state,
-    Piece piece,
-    List<GameMove> moves,
-    int landingRow,
-    int landingCol,
-    int distance,
-    int preTurn,
-    int postTurn, {
-    int? transparentForcefieldPlayer,
-  }) {
-    final travelFacing = mod4(piece.facing + preTurn);
-    final newFacing = mod4(travelFacing + postTurn);
-    final direction = cardinalDirections[newFacing];
-    final targetRow = landingRow + direction.dr;
-    final targetCol = landingCol + direction.dc;
-    final occupant = inBounds(targetRow, targetCol)
-        ? pieceAt(state, targetRow, targetCol)
-        : null;
-    var finalRow = landingRow;
-    var finalCol = landingCol;
-    var captures = const <String>[];
-
-    if (occupant != null &&
-        occupant.player != piece.player &&
-        occupant.type != PieceType.diamond &&
-        !isEnemyForcefield(
-          state,
-          piece.player,
-          targetRow,
-          targetCol,
-          transparentForcefieldPlayer: transparentForcefieldPlayer,
-        )) {
-      finalRow = targetRow;
-      finalCol = targetCol;
-      captures = <String>[occupant.id];
-    }
-
-    moves.add(
-      _move(
-        piece,
-        finalRow,
-        finalCol,
-        captures: captures,
-        newFacing: newFacing,
-        landingRow: landingRow,
-        landingCol: landingCol,
-        distance: distance,
-        preTurn: preTurn,
-        turn: postTurn,
-        travelFacing: travelFacing,
-      ),
-    );
   }
 
   List<GameMove> _triangleMoves(
@@ -455,119 +408,81 @@ class CrossmateEngine {
     int? transparentForcefieldPlayer,
   }) {
     final moves = <GameMove>[];
+    final direction = cardinalDirections[piece.facing];
+    final frontRow = piece.row + direction.dr;
+    final frontCol = piece.col + direction.dc;
+    final front = pieceAt(state, frontRow, frontCol);
 
-    _addTriangleOption(
-      state,
-      piece,
-      moves,
-      piece.row,
-      piece.col,
-      0,
-      0,
-      -1,
-      transparentForcefieldPlayer: transparentForcefieldPlayer,
-    );
-    _addTriangleOption(
-      state,
-      piece,
-      moves,
-      piece.row,
-      piece.col,
-      0,
-      0,
-      1,
-      transparentForcefieldPlayer: transparentForcefieldPlayer,
-    );
-
-    final facingDirection = cardinalDirections[piece.facing];
-    final immediateRow = piece.row + facingDirection.dr;
-    final immediateCol = piece.col + facingDirection.dc;
-    if (inBounds(immediateRow, immediateCol) &&
+    for (final turn in const <int>[-1, 1, 2]) {
+      moves.add(
+        _move(
+          piece,
+          piece.row,
+          piece.col,
+          newFacing: mod4(piece.facing + turn),
+          turn: turn,
+        ),
+      );
+    }
+    if (inBounds(state, frontRow, frontCol) &&
+        front == null &&
         !isEnemyForcefield(
           state,
           piece.player,
-          immediateRow,
-          immediateCol,
+          frontRow,
+          frontCol,
           transparentForcefieldPlayer: transparentForcefieldPlayer,
         )) {
-      final occupant = pieceAt(state, immediateRow, immediateCol);
-      if (occupant != null &&
-          occupant.player != piece.player &&
-          occupant.type != PieceType.diamond) {
-        _addTriangleOption(
-          state,
-          piece,
-          moves,
-          piece.row,
-          piece.col,
-          0,
-          0,
-          0,
-          transparentForcefieldPlayer: transparentForcefieldPlayer,
-        );
-      }
+      moves.add(_move(piece, frontRow, frontCol, distance: 1));
     }
 
-    for (var distance = 1; distance <= 2; distance += 1) {
-      final row = piece.row + facingDirection.dr * distance;
-      final col = piece.col + facingDirection.dc * distance;
-      if (!inBounds(row, col) ||
+    void addCapture(int row, int col, {bool clearFront = false}) {
+      if (!inBounds(state, row, col)) return;
+      final target = pieceAt(state, row, col);
+      if (target == null || target.player == piece.player) return;
+      if (clearFront && front != null) return;
+      final ignored = target.type == PieceType.diamond ? target.id : null;
+      if (clearFront &&
           isEnemyForcefield(
             state,
             piece.player,
-            row,
-            col,
+            frontRow,
+            frontCol,
+            ignoredDiamondId: ignored,
             transparentForcefieldPlayer: transparentForcefieldPlayer,
-          ) ||
-          pieceAt(state, row, col) != null) {
-        break;
+          )) {
+        return;
       }
-      for (final postTurn in const <int>[0, -1, 1]) {
-        _addTriangleOption(
-          state,
+      if (isEnemyForcefield(
+        state,
+        piece.player,
+        row,
+        col,
+        ignoredDiamondId: ignored,
+        transparentForcefieldPlayer: transparentForcefieldPlayer,
+      )) {
+        return;
+      }
+      moves.add(
+        _move(
           piece,
-          moves,
           row,
           col,
-          distance,
-          0,
-          postTurn,
-          transparentForcefieldPlayer: transparentForcefieldPlayer,
-        );
-      }
+          captures: <String>[target.id],
+          diamondCapture: target.type == PieceType.diamond,
+        ),
+      );
     }
 
-    for (final preTurn in const <int>[-1, 1]) {
-      final travelFacing = mod4(piece.facing + preTurn);
-      final direction = cardinalDirections[travelFacing];
-      for (var distance = 1; distance <= 2; distance += 1) {
-        final row = piece.row + direction.dr * distance;
-        final col = piece.col + direction.dc * distance;
-        if (!inBounds(row, col) ||
-            isEnemyForcefield(
-              state,
-              piece.player,
-              row,
-              col,
-              transparentForcefieldPlayer: transparentForcefieldPlayer,
-            ) ||
-            pieceAt(state, row, col) != null) {
-          break;
-        }
-        _addTriangleOption(
-          state,
-          piece,
-          moves,
-          row,
-          col,
-          distance,
-          preTurn,
-          0,
-          transparentForcefieldPlayer: transparentForcefieldPlayer,
-        );
-      }
-    }
-    return _deduplicate(moves);
+    addCapture(frontRow, frontCol);
+    addCapture(frontRow - direction.dc, frontCol + direction.dr);
+    addCapture(frontRow + direction.dc, frontCol - direction.dr);
+    addCapture(
+      piece.row + direction.dr * 2,
+      piece.col + direction.dc * 2,
+      clearFront: true,
+    );
+    return moves;
   }
 
   List<GameMove> _specialSquareDiamondCaptures(
@@ -646,10 +561,10 @@ class CrossmateEngine {
     final moves = <GameMove>[];
     for (final direction in cardinalDirections) {
       var jumped = false;
-      for (var distance = 1; distance < size; distance += 1) {
+      for (var distance = 1; distance < state.boardSize; distance += 1) {
         final row = piece.row + direction.dr * distance;
         final col = piece.col + direction.dc * distance;
-        if (!inBounds(row, col)) break;
+        if (!inBounds(state, row, col)) break;
         if (isEnemyForcefield(
           state,
           piece.player,
@@ -766,7 +681,7 @@ class CrossmateEngine {
       for (var distance = 1; distance <= 3; distance += 1) {
         final row = piece.row + direction.dr * distance;
         final col = piece.col + direction.dc * distance;
-        if (!inBounds(row, col) ||
+        if (!inBounds(state, row, col) ||
             isEnemyForcefield(
               state,
               piece.player,
@@ -1048,21 +963,14 @@ class CrossmateEngine {
     counts[key] = (counts[key] ?? 0) + 1;
     next = next.copyWith(positionCounts: counts);
 
-    final nextCheck = isInCheck(next, next.currentPlayer);
     final nextMoves = allLegalMoves(next, next.currentPlayer);
     GameResult? result;
     if (nextMoves.isEmpty) {
-      result = nextCheck
-          ? GameResult(
-              type: 'win',
-              winner: mover,
-              reason: 'Checkmate — the opposing cross has no legal escape.',
-            )
-          : const GameResult(
-              type: 'draw',
-              winner: 0,
-              reason: 'Stalemate — the player to move has no legal move.',
-            );
+      result = GameResult(
+        type: 'win',
+        winner: mover,
+        reason: 'Crossmate — the opposing player has no legal move.',
+      );
     } else if ((counts[key] ?? 0) >= 3) {
       result = const GameResult(
         type: 'draw',
@@ -1078,7 +986,8 @@ class CrossmateEngine {
     }
 
     final alive = next.pieces.where((piece) => piece.alive).toList();
-    if (alive.length == 2 &&
+    if (result == null &&
+        alive.length == 2 &&
         alive.every((piece) => piece.type == PieceType.cross) &&
         alive[0].player != alive[1].player) {
       result = const GameResult(
@@ -1109,7 +1018,7 @@ class CrossmateEngine {
             )
             .toList()
           ..sort();
-    return '$size|${state.currentPlayer}|${pieces.join('|')}';
+    return '${state.boardSize}|${state.currentPlayer}|${pieces.join('|')}';
   }
 
   bool onlyCrossesRemain(GameState state) {

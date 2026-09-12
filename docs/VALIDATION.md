@@ -1,5 +1,17 @@
 # Package validation
 
+## Browser v1.8.1 rules update — 2026-09-12
+
+- Updated triangle movement, rotation, capture geometry and diamond captures, plus loss when no legal move exists even without check.
+- Added 7×7 selection, state serialization, board rendering, robot support and online rematch size preservation.
+- `flutter analyze --no-pub`: no issues found.
+- `flutter build apk --debug --no-pub`: succeeded; APK at `build/app/outputs/flutter-apk/app-debug.apk`.
+- `flutter test --no-pub`: all 27 tests passed, including the new rules, both board sizes, flipped board taps, the size chooser and the 180° rotation control.
+- Formatting checks pass for the game, services, screens, widgets and tests. A whole-project format check still flags pre-existing formatting in `lib/main.dart` and generated `lib/firebase_options.dart`.
+- Live two-device online play and physical-device gameplay were not tested in this update.
+
+The packaging checks below describe the original archive, before this update.
+
 ## Checks completed before packaging
 
 - Compared the package baseline against the current `games/crossmate/index.html` source and confirmed browser version 1.7.3, the 9x9 formation, point values, four themes, 60-move draw rule, 10-day rooms, forcefield restriction, and square-backed triangle design.
