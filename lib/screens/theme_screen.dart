@@ -4,6 +4,7 @@ import '../game/controller.dart';
 import '../game/models.dart';
 import '../game/palette.dart';
 import '../widgets/app_background.dart';
+import '../widgets/crossmate_board.dart';
 
 class ThemeScreen extends StatelessWidget {
   const ThemeScreen({required this.controller, super.key});
@@ -25,67 +26,77 @@ class ThemeScreen extends StatelessWidget {
             ),
             body: SafeArea(
               top: false,
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 26),
-                itemCount: BoardThemeId.values.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final id = BoardThemeId.values[index];
-                  final palette = CrossmatePalette.from(id);
-                  final selected = controller.theme == id;
-                  return Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(22),
-                      onTap: () => controller.setTheme(id),
-                      child: Ink(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: palette.surface,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 680),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 26),
+                    itemCount: BoardThemeId.values.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final id = BoardThemeId.values[index];
+                      final palette = CrossmatePalette.from(id);
+                      final selected = controller.theme == id;
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
                           borderRadius: BorderRadius.circular(22),
-                          border: Border.all(
-                            color: selected ? palette.accent : Colors.white12,
-                            width: selected ? 2.5 : 1,
-                          ),
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            _ThemePreview(palette: palette),
-                            const SizedBox(width: 15),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Text(
-                                    palette.name,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleLarge,
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    _description(id),
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.62,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                          onTap: () => controller.setTheme(id),
+                          child: Ink(
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: palette.surface,
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: selected
+                                    ? palette.accent
+                                    : Colors.white12,
+                                width: selected ? 1.5 : 1,
                               ),
                             ),
-                            Icon(
-                              selected
-                                  ? Icons.check_circle_rounded
-                                  : Icons.circle_outlined,
-                              color: selected ? palette.accent : Colors.white30,
+                            child: Row(
+                              children: <Widget>[
+                                _ThemePreview(palette: palette),
+                                const SizedBox(width: 15),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        palette.name,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleMedium,
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        _description(id),
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.62,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(
+                                  selected
+                                      ? Icons.check_circle_rounded
+                                      : Icons.circle_outlined,
+                                  color: selected
+                                      ? palette.accent
+                                      : Colors.white30,
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                },
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           ),
@@ -95,7 +106,7 @@ class ThemeScreen extends StatelessWidget {
   }
 
   String _description(BoardThemeId id) => switch (id) {
-    BoardThemeId.neon => 'Electric blue and magenta tournament arena.',
+    BoardThemeId.neon => 'Cool slate with sea-glass and coral pieces.',
     BoardThemeId.wood => 'Warm carved timber with classic table-game weight.',
     BoardThemeId.obsidian => 'Dark stone, steel grid and restrained gold.',
     BoardThemeId.prism => 'Colourful violet, cyan and rose circuitry.',
@@ -110,8 +121,8 @@ class _ThemePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 86,
-      height: 86,
+      width: 96,
+      height: 96,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(17),
@@ -128,26 +139,18 @@ class _ThemePreview extends StatelessWidget {
             color: ((index ~/ 4) + index).isEven
                 ? palette.boardLight
                 : palette.boardDark,
-            child: index == 5
-                ? Center(
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: palette.playerOne,
+            child: index == 5 || index == 10
+                ? Padding(
+                    padding: const EdgeInsets.all(3),
+                    child: PieceToken(
+                      piece: Piece(
+                        id: 'preview-$index',
+                        type: index == 5 ? PieceType.cross : PieceType.diamond,
+                        player: index == 5 ? 1 : 2,
+                        row: 0,
+                        col: 0,
                       ),
-                    ),
-                  )
-                : index == 10
-                ? Center(
-                    child: Transform.rotate(
-                      angle: 0.785,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        color: palette.playerTwo,
-                      ),
+                      palette: palette,
                     ),
                   )
                 : null,

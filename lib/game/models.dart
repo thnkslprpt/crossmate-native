@@ -4,7 +4,26 @@ enum PieceType { circle, diamond, square, triangle, cross }
 
 enum MatchMode { local, computer, online }
 
-enum AiDifficulty { easy, normal, hard }
+enum AiDifficulty { easy, normal, hard, expert, master }
+
+extension AiDifficultyInfo on AiDifficulty {
+  String get label => switch (this) {
+    AiDifficulty.easy => '1 · Beginner',
+    AiDifficulty.normal => '2 · Casual',
+    AiDifficulty.hard => '3 · Challenging',
+    AiDifficulty.expert => '4 · Expert',
+    AiDifficulty.master => '5 · Master',
+  };
+
+  String get description => switch (this) {
+    AiDifficulty.easy => 'A forgiving opponent while you learn the game.',
+    AiDifficulty.normal => 'Plans ahead, but leaves chances to win.',
+    AiDifficulty.hard => 'Looks further ahead and punishes mistakes.',
+    AiDifficulty.expert => 'Deeper planning with a sharp eye for captures.',
+    AiDifficulty.master =>
+      'Our strongest opponent. Think carefully every turn.',
+  };
+}
 
 enum BoardThemeId { neon, wood, obsidian, prism }
 

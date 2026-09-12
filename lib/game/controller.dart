@@ -470,9 +470,7 @@ class CrossmateController extends ChangeNotifier {
 
     aiThinking = true;
 
-    message =
-        '${aiDifficulty.name[0].toUpperCase()}'
-        '${aiDifficulty.name.substring(1)} robot is thinking…';
+    message = '${aiDifficulty.label} robot is thinking…';
 
     _notify();
 

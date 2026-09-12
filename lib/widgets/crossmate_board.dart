@@ -59,19 +59,19 @@ class CrossmateBoard extends StatelessWidget {
     final checkPath = checkedCross == null
         ? const <String>{}
         : _checkPath(checkedCross, attackingPieces);
-    final lastPath = state.lastMove == null
-        ? const <String>{}
-        : _pathForMove(state.lastMove!.move);
 
     return AspectRatio(
       aspectRatio: 1,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: palette.grid, width: 2),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: palette.grid.withValues(alpha: 0.65),
+            width: 3,
+          ),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: palette.glow.withValues(alpha: 0.28),
+              color: palette.glow.withValues(alpha: 0.08),
               blurRadius: 28,
               spreadRadius: 2,
             ),
@@ -109,14 +109,8 @@ class CrossmateBoard extends StatelessWidget {
                     final isLegal = legalLandings.contains(key);
                     final isCapture = legalCaptures.contains(key);
                     final isThreatenedTarget = threatenedTargets.contains(key);
-                    final isSelected = piece?.id == selectedPieceId;
-                    final isLastFrom =
-                        state.lastMove?.move.fromRow == row &&
-                        state.lastMove?.move.fromCol == col;
-                    final isLastTo =
-                        state.lastMove?.move.toRow == row &&
-                        state.lastMove?.move.toCol == col;
-                    final isLastPath = lastPath.contains(key);
+                    final isSelected =
+                        piece != null && piece.id == selectedPieceId;
                     final isCheckPath = checkPath.contains(key);
                     final isChecked = piece?.id == checkedCross?.id;
                     final isAttacker =
@@ -148,7 +142,14 @@ class CrossmateBoard extends StatelessWidget {
                           duration: const Duration(milliseconds: 160),
                           curve: Curves.easeOut,
                           decoration: BoxDecoration(
-                            color: base,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color.lerp(base, Colors.white, 0.035)!,
+                                base,
+                              ],
+                            ),
                             border: Border.all(
                               color: Colors.black.withValues(alpha: 0.18),
                               width: 0.5,
@@ -174,21 +175,11 @@ class CrossmateBoard extends StatelessWidget {
                                   palette: palette,
                                   emphasized: isRelevantCheckField,
                                 ),
-                              if (isLastPath && !isLastFrom && !isLastTo)
-                                Container(
-                                  color: palette.accent.withValues(alpha: 0.10),
-                                ),
                               if (isCheckPath)
                                 Container(
                                   color: const Color(
                                     0xFFFF334C,
                                   ).withValues(alpha: 0.16),
-                                ),
-                              if (isLastFrom || isLastTo)
-                                Container(
-                                  color: palette.accent.withValues(
-                                    alpha: isLastTo ? 0.29 : 0.16,
-                                  ),
                                 ),
                               if (isSelected)
                                 Container(
@@ -201,7 +192,7 @@ class CrossmateBoard extends StatelessWidget {
                                 ),
                               if (piece != null)
                                 Padding(
-                                  padding: EdgeInsets.all(cellSize * 0.075),
+                                  padding: EdgeInsets.all(cellSize * 0.14),
                                   child: PieceToken(
                                     piece: piece,
                                     palette: palette,
@@ -214,9 +205,9 @@ class CrossmateBoard extends StatelessWidget {
                               if (isLegal)
                                 Center(
                                   child: Container(
-                                    width: cellSize * (isCapture ? 0.79 : 0.27),
+                                    width: cellSize * (isCapture ? 0.82 : 0.19),
                                     height:
-                                        cellSize * (isCapture ? 0.79 : 0.27),
+                                        cellSize * (isCapture ? 0.82 : 0.19),
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       color: isCapture
@@ -247,7 +238,7 @@ class CrossmateBoard extends StatelessWidget {
                   child: CustomPaint(
                     painter: _BoardFramePainter(
                       boardSize: state.boardSize,
-                      color: palette.grid.withValues(alpha: 0.5),
+                      color: palette.grid.withValues(alpha: 0.16),
                     ),
                     size: Size.infinite,
                   ),
@@ -360,7 +351,7 @@ class PieceToken extends StatelessWidget {
         : BoxShape.rectangle;
     final radius = piece.type == PieceType.circle
         ? null
-        : BorderRadius.circular(7);
+        : BorderRadius.circular(10);
     final borderColor = checked
         ? const Color(0xFFFF334C)
         : target
@@ -378,8 +369,9 @@ class PieceToken extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: <Color>[
-            Color.lerp(color, Colors.white, 0.22)!,
-            Color.lerp(color, Colors.black, 0.22)!,
+            Color.lerp(color, Colors.white, 0.38)!,
+            color,
+            Color.lerp(color, Colors.black, 0.28)!,
           ],
         ),
         border: Border.all(
@@ -389,20 +381,21 @@ class PieceToken extends StatelessWidget {
         boxShadow: <BoxShadow>[
           BoxShadow(
             color: (checked ? const Color(0xFFFF334C) : color).withValues(
-              alpha: checked ? 0.62 : 0.33,
+              alpha: checked ? 0.62 : 0.10,
             ),
             blurRadius: checked || target ? 12 : 5,
             spreadRadius: checked || target ? 1 : 0,
           ),
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.42),
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 3),
             blurRadius: 3,
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(4),
+      child: FractionallySizedBox(
+        widthFactor: 0.68,
+        heightFactor: 0.68,
         child: AnimatedRotation(
           duration: const Duration(milliseconds: 220),
           turns: piece.type == PieceType.triangle
@@ -455,13 +448,13 @@ class _ForcefieldCell extends StatelessWidget {
         border: Border.all(
           color: emphasized
               ? const Color(0xFFFF667A)
-              : colors.first.withValues(alpha: 0.62),
+              : colors.first.withValues(alpha: 0.24),
           width: emphasized ? 2 : 1,
         ),
       ),
       child: CustomPaint(
         painter: _ForcefieldPainter(
-          color: colors.first.withValues(alpha: 0.56),
+          color: colors.first.withValues(alpha: 0.30),
         ),
       ),
     );
@@ -479,7 +472,7 @@ class _PieceGlyphPainter extends CustomPainter {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(2.0, size.shortestSide * 0.12)
+      ..strokeWidth = math.max(2.0, size.shortestSide * 0.095)
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final fill = Paint()
@@ -557,8 +550,17 @@ class _ForcefieldPainter extends CustomPainter {
       ..color = color
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset.zero, Offset(size.width, size.height), paint);
-    canvas.drawLine(Offset(size.width, 0), Offset(0, size.height), paint);
+    // Small corner brackets keep protected squares readable beneath pieces.
+    final inset = size.shortestSide * 0.10;
+    final arm = size.shortestSide * 0.15;
+    for (final dx in [inset, size.width - inset]) {
+      for (final dy in [inset, size.height - inset]) {
+        final sx = dx < size.width / 2 ? 1 : -1;
+        final sy = dy < size.height / 2 ? 1 : -1;
+        canvas.drawLine(Offset(dx, dy), Offset(dx + sx * arm, dy), paint);
+        canvas.drawLine(Offset(dx, dy), Offset(dx, dy + sy * arm), paint);
+      }
+    }
   }
 
   @override

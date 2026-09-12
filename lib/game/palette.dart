@@ -32,16 +32,16 @@ class CrossmatePalette {
   static CrossmatePalette from(BoardThemeId id) => switch (id) {
     BoardThemeId.neon => const CrossmatePalette(
       name: 'Neon Arena',
-      background: <Color>[Color(0xFF050718), Color(0xFF10164A)],
-      surface: Color(0xCC111A3D),
-      surfaceStrong: Color(0xFF17224E),
-      boardLight: Color(0xFF172E59),
-      boardDark: Color(0xFF0C1936),
-      grid: Color(0xFF3D62A4),
-      playerOne: Color(0xFF38E8FF),
-      playerTwo: Color(0xFFFF4F9A),
-      accent: Color(0xFFFFD166),
-      glow: Color(0xFF7A5CFF),
+      background: <Color>[Color(0xFF0B121B), Color(0xFF162838)],
+      surface: Color(0xF0182533),
+      surfaceStrong: Color(0xFF202F3E),
+      boardLight: Color(0xFF334B5B),
+      boardDark: Color(0xFF223644),
+      grid: Color(0xFF688291),
+      playerOne: Color(0xFF8ADDD4),
+      playerTwo: Color(0xFFEBAB9B),
+      accent: Color(0xFFE8C98C),
+      glow: Color(0xFF648EAD),
     ),
     BoardThemeId.wood => const CrossmatePalette(
       name: 'Grandmaster Wood',
@@ -71,15 +71,15 @@ class CrossmatePalette {
     ),
     BoardThemeId.prism => const CrossmatePalette(
       name: 'Prism Circuit',
-      background: <Color>[Color(0xFF191035), Color(0xFF082B44)],
-      surface: Color(0xD9291B50),
-      surfaceStrong: Color(0xFF332360),
-      boardLight: Color(0xFF3E3172),
-      boardDark: Color(0xFF173A5C),
+      background: <Color>[Color(0xFF171528), Color(0xFF253249)],
+      surface: Color(0xF025263E),
+      surfaceStrong: Color(0xFF32334E),
+      boardLight: Color(0xFF4D496D),
+      boardDark: Color(0xFF303C59),
       grid: Color(0xFF8B79D3),
-      playerOne: Color(0xFF6FFFE9),
-      playerTwo: Color(0xFFFF7AB6),
-      accent: Color(0xFFFFE66D),
+      playerOne: Color(0xFFA3E7DE),
+      playerTwo: Color(0xFFE7ACCD),
+      accent: Color(0xFFE6D6A2),
       glow: Color(0xFFB66DFF),
     ),
   };
@@ -99,14 +99,54 @@ ThemeData buildCrossmateTheme(BoardThemeId id) {
     colorScheme: scheme,
     scaffoldBackgroundColor: Colors.transparent,
     useMaterial3: true,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      centerTitle: false,
+      titleTextStyle: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: Color(0xFFF5F2EB),
+      ),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: palette.surfaceStrong,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(28),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+    ),
+    dividerTheme: DividerThemeData(color: Colors.white.withValues(alpha: 0.10)),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(vertical: 14),
+        ),
+        side: WidgetStatePropertyAll(
+          BorderSide(color: Colors.white.withValues(alpha: 0.14)),
+        ),
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? palette.accent.withValues(alpha: 0.16)
+              : palette.surface,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? palette.accent
+              : Colors.white70,
+        ),
+      ),
+    ),
     textTheme: const TextTheme(
-      displaySmall: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -1.2),
+      displaySmall: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -1.2),
       headlineSmall: TextStyle(
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
         letterSpacing: -0.4,
       ),
-      titleLarge: TextStyle(fontWeight: FontWeight.w800),
-      titleMedium: TextStyle(fontWeight: FontWeight.w800),
+      titleLarge: TextStyle(fontWeight: FontWeight.w600),
+      titleMedium: TextStyle(fontWeight: FontWeight.w600),
       bodyLarge: TextStyle(height: 1.35),
       bodyMedium: TextStyle(height: 1.35),
     ),
@@ -121,14 +161,14 @@ ThemeData buildCrossmateTheme(BoardThemeId id) {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size(48, 52),
-        textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(48, 50),
-        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+        textStyle: const TextStyle(fontWeight: FontWeight.w600),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         side: BorderSide(color: Colors.white.withValues(alpha: 0.18)),
       ),

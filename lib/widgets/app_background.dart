@@ -54,7 +54,7 @@ class _Glow extends StatelessWidget {
           shape: BoxShape.circle,
           gradient: RadialGradient(
             colors: <Color>[
-              color.withValues(alpha: 0.19),
+              color.withValues(alpha: 0.08),
               color.withValues(alpha: 0),
             ],
           ),

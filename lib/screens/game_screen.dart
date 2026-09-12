@@ -22,6 +22,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   int? _shownResultMove;
+  bool _rotationOpen = false;
 
   CrossmateController get controller => widget.controller;
 
@@ -54,6 +55,7 @@ class _GameScreenState extends State<GameScreen> {
     final palette = CrossmatePalette.from(controller.theme);
     final state = controller.displayedState;
     _scheduleResult(state);
+    _scheduleRotation();
 
     return PopScope<void>(
       onPopInvokedWithResult: (didPop, result) {
@@ -70,7 +72,7 @@ class _GameScreenState extends State<GameScreen> {
               children: <Widget>[
                 const Text(
                   'Crossmate',
-                  style: TextStyle(fontWeight: FontWeight.w900),
+                  style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 Text(
                   _modeTitle(),
@@ -139,9 +141,37 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  void _scheduleRotation() {
+    if (_rotationOpen || controller.pendingTriangleMoves.isEmpty) return;
+    _rotationOpen = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final moves = List<GameMove>.of(controller.pendingTriangleMoves);
+      if (moves.isEmpty) {
+        _rotationOpen = false;
+        return;
+      }
+      final move = await showDialog<GameMove>(
+        context: context,
+        builder: (context) => _TriangleRotationDialog(
+          moves: moves,
+          palette: CrossmatePalette.from(controller.theme),
+          flipped: _perspectivePlayer(controller) == 2,
+        ),
+      );
+      _rotationOpen = false;
+      if (!mounted) return;
+      if (move != null && controller.pendingTriangleMoves.contains(move)) {
+        unawaited(controller.chooseTriangle(move));
+      } else {
+        controller.cancelChoice();
+      }
+    });
+  }
+
   String _modeTitle() => switch (controller.mode) {
     MatchMode.local => 'Two players • same device',
-    MatchMode.computer => '${controller.aiDifficulty.name} robot',
+    MatchMode.computer => '${controller.aiDifficulty.label} robot',
     MatchMode.online =>
       controller.roomCode == null
           ? 'Online room'
@@ -412,17 +442,25 @@ class _PlayerBar extends StatelessWidget {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
-      padding: EdgeInsets.symmetric(horizontal: 13, vertical: compact ? 8 : 13),
+      padding: EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: compact ? 11 : 16,
+      ),
       decoration: BoxDecoration(
-        color: active ? color.withValues(alpha: 0.14) : palette.surface,
+        color: active
+            ? Color.alphaBlend(
+                color.withValues(alpha: 0.08),
+                palette.surfaceStrong,
+              )
+            : palette.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: active ? color.withValues(alpha: 0.86) : Colors.white12,
-          width: active ? 2 : 1,
+          color: active ? color.withValues(alpha: 0.55) : Colors.white12,
+          width: 1,
         ),
         boxShadow: active
             ? <BoxShadow>[
-                BoxShadow(color: color.withValues(alpha: 0.28), blurRadius: 13),
+                BoxShadow(color: color.withValues(alpha: 0.06), blurRadius: 13),
               ]
             : null,
       ),
@@ -436,7 +474,7 @@ class _PlayerBar extends StatelessWidget {
               shape: BoxShape.circle,
               color: color,
               boxShadow: <BoxShadow>[
-                BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 8),
+                BoxShadow(color: color.withValues(alpha: 0.10), blurRadius: 8),
               ],
             ),
             child: Text(
@@ -447,7 +485,7 @@ class _PlayerBar extends StatelessWidget {
                         Brightness.dark
                     ? Colors.white
                     : Colors.black,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -464,7 +502,7 @@ class _PlayerBar extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                           fontSize: compact ? 14 : 16,
                         ),
                       ),
@@ -475,13 +513,14 @@ class _PlayerBar extends StatelessWidget {
                     ],
                   ],
                 ),
-                if (!compact)
-                  Text(
-                    active ? 'Your move' : 'Waiting',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.55),
-                    ),
-                  ),
+                Text(
+                  state.gameOver
+                      ? 'Match complete'
+                      : active
+                      ? 'To move'
+                      : 'Waiting',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.55)),
+                ),
               ],
             ),
           ),
@@ -490,7 +529,7 @@ class _PlayerBar extends StatelessWidget {
             style: TextStyle(
               color: color,
               fontSize: compact ? 21 : 28,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(width: 4),
@@ -499,7 +538,7 @@ class _PlayerBar extends StatelessWidget {
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.42),
               fontSize: 9,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -510,7 +549,7 @@ class _PlayerBar extends StatelessWidget {
   String _playerLabel() {
     if (controller.mode == MatchMode.computer) {
       return player == controller.aiPlayer
-          ? '${controller.aiDifficulty.name} robot'
+          ? '${controller.aiDifficulty.label} robot'
           : 'You';
     }
     if (controller.mode == MatchMode.online) {
@@ -579,7 +618,7 @@ class _StatusStrip extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
             ),
           ),
         ],
@@ -596,50 +635,6 @@ class _ChoicePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (controller.pendingTriangleMoves.isNotEmpty) {
-      return Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: palette.surfaceStrong,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: palette.accent.withValues(alpha: 0.5)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            const Text(
-              'Turn in place',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 7,
-              runSpacing: 7,
-              children: controller.pendingTriangleMoves
-                  .map((move) {
-                    final relativeTurn = move.preTurn != 0
-                        ? move.preTurn
-                        : move.turn;
-                    return FilledButton.tonalIcon(
-                      onPressed: () => controller.chooseTriangle(move),
-                      icon: Icon(_turnIcon(relativeTurn)),
-                      label: Text(_turnLabel(move)),
-                    );
-                  })
-                  .toList(growable: false),
-            ),
-            TextButton(
-              onPressed: controller.cancelChoice,
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      );
-    }
-
     if (controller.pendingEdgeMoves.isNotEmpty) {
       return Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -656,7 +651,7 @@ class _ChoicePanel extends StatelessWidget {
             const Expanded(
               child: Text(
                 'Tap a highlighted non-cross enemy piece to remove it.',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
               ),
             ),
             IconButton(
@@ -669,18 +664,109 @@ class _ChoicePanel extends StatelessWidget {
     }
     return const SizedBox.shrink();
   }
+}
 
-  static IconData _turnIcon(int turn) {
-    if (turn == 2) return Icons.u_turn_right_rounded;
-    if (turn < 0) return Icons.turn_left_rounded;
-    if (turn > 0) return Icons.turn_right_rounded;
-    return Icons.arrow_upward_rounded;
-  }
+class _TriangleRotationDialog extends StatelessWidget {
+  const _TriangleRotationDialog({
+    required this.moves,
+    required this.palette,
+    required this.flipped,
+  });
 
-  static String _turnLabel(GameMove move) {
-    if (move.turn == 2) return 'Rotate 180°';
-    return move.turn < 0 ? 'Rotate left' : 'Rotate right';
-  }
+  final List<GameMove> moves;
+  final CrossmatePalette palette;
+  final bool flipped;
+
+  @override
+  Widget build(BuildContext context) => Dialog(
+    backgroundColor: palette.surfaceStrong,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 380),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.rotate_90_degrees_cw_rounded,
+              color: palette.accent,
+              size: 30,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Rotate your triangle',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Choose its new direction. Rotating uses this turn.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 24),
+            for (final move in moves)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    side: BorderSide(color: palette.grid),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context, move),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: PieceToken(
+                          piece: Piece(
+                            id: move.pieceId,
+                            type: PieceType.triangle,
+                            player: move.player,
+                            row: move.toRow,
+                            col: move.toCol,
+                            facing: move.newFacing,
+                          ),
+                          palette: palette,
+                          facingOffset: flipped ? 2 : 0,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          move.turn == 2
+                              ? 'Rotate 180°'
+                              : move.turn < 0
+                              ? 'Rotate left'
+                              : 'Rotate right',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded, color: palette.accent),
+                    ],
+                  ),
+                ),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _HistoryControls extends StatelessWidget {

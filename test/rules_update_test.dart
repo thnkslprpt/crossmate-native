@@ -340,6 +340,46 @@ void main() {
     expect(controller.state!.pieces, hasLength(28));
   });
 
+  test('Master rejects a poisoned capture', () async {
+    final state = position([
+      ownCross,
+      enemyCross,
+      const Piece(
+        id: 'attacker',
+        type: PieceType.square,
+        player: 1,
+        row: 4,
+        col: 4,
+      ),
+      const Piece(
+        id: 'bait',
+        type: PieceType.circle,
+        player: 2,
+        row: 4,
+        col: 6,
+      ),
+      const Piece(
+        id: 'guard',
+        type: PieceType.square,
+        player: 2,
+        row: 0,
+        col: 6,
+      ),
+    ]);
+    expect(
+      engine.allLegalMoves(state, 1).any((m) => m.captures.contains('bait')),
+      isTrue,
+    );
+    final move = await const CrossmateAi().chooseMove(
+      state,
+      AiDifficulty.master,
+      1,
+    );
+    expect(move, isNotNull);
+    expect(engine.canonicalMove(state, move!), isNotNull);
+    expect(move.captures, isNot(contains('bait')));
+  });
+
   test(
     'robot returns a legal move on 7x7 at every difficulty',
     () async {

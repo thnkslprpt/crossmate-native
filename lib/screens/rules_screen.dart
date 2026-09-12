@@ -92,7 +92,17 @@ class _RulesScreenState extends State<RulesScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
                       child: Column(
                         children: <Widget>[
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 20),
+                          Text(
+                            'FIELD GUIDE  /  ${index + 1} OF ${sections.length}',
+                            style: TextStyle(
+                              color: widget.palette.accent,
+                              fontSize: 11,
+                              letterSpacing: 2,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 28),
                           _RuleIcon(
                             icon: section.icon,
                             palette: widget.palette,
@@ -107,13 +117,23 @@ class _RulesScreenState extends State<RulesScreen> {
                           const SizedBox(height: 14),
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 520),
-                            child: Text(
-                              section.body,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 17,
-                                height: 1.55,
-                                color: Colors.white.withValues(alpha: 0.78),
+                            child: Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: widget.palette.surface,
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.08),
+                                ),
+                              ),
+                              child: Text(
+                                section.body,
+                                textAlign: TextAlign.start,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  height: 1.55,
+                                  color: Colors.white.withValues(alpha: 0.78),
+                                ),
                               ),
                             ),
                           ),
@@ -218,14 +238,14 @@ class _RuleIcon extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         gradient: LinearGradient(
           colors: <Color>[
-            palette.playerOne.withValues(alpha: 0.32),
-            palette.playerTwo.withValues(alpha: 0.24),
+            palette.playerOne.withValues(alpha: 0.12),
+            palette.playerTwo.withValues(alpha: 0.05),
           ],
         ),
-        border: Border.all(color: palette.accent.withValues(alpha: 0.42)),
+        border: Border.all(color: palette.accent.withValues(alpha: 0.22)),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: palette.glow.withValues(alpha: 0.35),
+            color: palette.glow.withValues(alpha: 0.08),
             blurRadius: 26,
           ),
         ],
@@ -279,7 +299,7 @@ class _ScoreItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       '$label $score',
-      style: const TextStyle(fontWeight: FontWeight.w900),
+      style: const TextStyle(fontWeight: FontWeight.w700),
     );
   }
 }

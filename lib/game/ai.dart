@@ -54,7 +54,8 @@ class _AiSearch {
   final CrossmateEngine _engine;
   final Random _random;
   final Stopwatch _clock = Stopwatch();
-  final Map<String, double> _transposition = <String, double>{};
+  final Map<String, _SearchEntry> _transposition = {};
+  String? _preferredRootMove;
   late int _timeLimitMs;
   var _nodes = 0;
 
@@ -63,57 +64,45 @@ class _AiSearch {
     if (legal.isEmpty) return null;
     if (difficulty == AiDifficulty.easy) return _easyMove(state, legal);
 
-    _timeLimitMs = difficulty == AiDifficulty.hard ? 1400 : 450;
-    final maxDepth = difficulty == AiDifficulty.hard ? 4 : 2;
+    final (timeLimit, maxDepth) = switch (difficulty) {
+      AiDifficulty.easy => (0, 0),
+      AiDifficulty.normal => (450, 2),
+      AiDifficulty.hard => (1400, 4),
+      AiDifficulty.expert => (2800, 6),
+      AiDifficulty.master => (5000, 8),
+    };
+    _timeLimitMs = timeLimit;
     _clock.start();
-    GameMove? best = legal.first;
+    GameMove? best = _orderedMoves(state, legal).first;
 
     try {
       for (var depth = 1; depth <= maxDepth; depth += 1) {
         final result = _searchRoot(state, depth);
-        if (result.move != null) best = result.move;
+        if (result.move != null) {
+          best = result.move;
+          _preferredRootMove = best!.signature;
+        }
+        if (result.score.abs() >= mateScore - 100) break;
       }
     } on _SearchTimeout {
-      // Keep the strongest fully or partially completed result.
+      // Keep the strongest fully completed iteration.
     }
     return best;
   }
 
   void _checkTime() {
     _nodes += 1;
-    if ((_nodes & 127) == 0 && _clock.elapsedMilliseconds >= _timeLimitMs) {
+    if ((_nodes & 7) == 0 && _clock.elapsedMilliseconds >= _timeLimitMs) {
       throw const _SearchTimeout();
     }
   }
 
   GameMove _easyMove(GameState state, List<GameMove> legal) {
-    final ranked = legal.map((move) {
-      final child = _advanceForSearch(state, move);
-      final instant =
-          _engine.crossFor(child, _engine.otherPlayer(rootPlayer)) == null;
-      final centre =
-          state.boardSize -
-          1 -
-          ((move.toRow - state.boardSize ~/ 2).abs() +
-              (move.toCol - state.boardSize ~/ 2).abs());
-      final checkBonus =
-          !instant && _engine.isInCheck(child, _engine.otherPlayer(rootPlayer))
-          ? 180
-          : 0;
-      return _RankedMove(
-        move,
-        instant
-            ? mateScore
-            : _capturedMaterial(state, move) * 110 +
-                  checkBonus +
-                  centre * 6 +
-                  (_random.nextDouble() - 0.5) * 520,
-      );
-    }).toList()..sort((a, b) => b.score.compareTo(a.score));
-
-    if (ranked.first.score >= mateScore / 2) return ranked.first.move;
-    final poolSize = min(ranked.length, max(3, (ranked.length * 0.38).ceil()));
-    return ranked[_random.nextInt(poolSize)].move;
+    // Usually play without looking ahead, giving beginners room to experiment.
+    if (_random.nextDouble() < 0.85) {
+      return legal[_random.nextInt(legal.length)];
+    }
+    return _orderedMoves(state, legal).first;
   }
 
   _SearchResult _searchRoot(GameState state, int depth) {
@@ -121,26 +110,22 @@ class _AiSearch {
       state,
       _engine.allLegalMoves(state, rootPlayer),
     );
+    final preferred = moves.indexWhere(
+      (move) => move.signature == _preferredRootMove,
+    );
+    if (preferred > 0) moves.insert(0, moves.removeAt(preferred));
     var bestScore = double.negativeInfinity;
     final bestMoves = <GameMove>[];
 
     for (final move in moves) {
       _checkTime();
       final child = _advanceForSearch(state, move);
-      final score = _minimax(
-        child,
-        depth - 1,
-        double.negativeInfinity,
-        double.infinity,
-        1,
-      );
+      final score = _minimax(child, depth - 1, bestScore, double.infinity, 1);
       if (score > bestScore + 0.001) {
         bestScore = score;
         bestMoves
           ..clear()
           ..add(move);
-      } else if ((score - bestScore).abs() <= 0.001) {
-        bestMoves.add(move);
       }
     }
     return _SearchResult(
@@ -160,17 +145,27 @@ class _AiSearch {
     final moves = _engine.allLegalMoves(state, state.currentPlayer);
     final terminal = _terminalScore(state, ply, moves);
     if (terminal != null) return terminal;
-    if (depth <= 0) return _evaluate(state);
+    if (depth <= 0) {
+      if (difficulty == AiDifficulty.expert ||
+          difficulty == AiDifficulty.master) {
+        return _quiescence(state, moves, alpha, beta, ply, 3);
+      }
+      return _evaluate(state);
+    }
 
-    final key = '${_engine.positionKey(state)}|$depth|$rootPlayer';
+    final key =
+        '${_engine.positionKey(state)}|${state.halfmoveClock}|${state.scores}|$depth|$ply';
     final cached = _transposition[key];
-    if (cached != null) return cached;
+    if (cached != null) {
+      if (cached.bound == 0) return cached.score;
+      if (cached.bound > 0 && cached.score >= beta) return cached.score;
+      if (cached.bound < 0 && cached.score <= alpha) return cached.score;
+    }
 
     final maximizing = state.currentPlayer == rootPlayer;
     var best = maximizing ? double.negativeInfinity : double.infinity;
     var localAlpha = alpha;
     var localBeta = beta;
-    var cutoff = false;
 
     for (final move in _orderedMoves(state, moves)) {
       final child = _advanceForSearch(state, move);
@@ -183,11 +178,69 @@ class _AiSearch {
         localBeta = min(localBeta, best);
       }
       if (localBeta <= localAlpha) {
-        cutoff = true;
         break;
       }
     }
-    if (!cutoff) _transposition[key] = best;
+    _transposition[key] = _SearchEntry(
+      best,
+      best <= alpha
+          ? -1
+          : best >= beta
+          ? 1
+          : 0,
+    );
+    return best;
+  }
+
+  double _quiescence(
+    GameState state,
+    List<GameMove> moves,
+    double alpha,
+    double beta,
+    int ply,
+    int remaining,
+  ) {
+    _checkTime();
+    final terminal = _terminalScore(state, ply, moves);
+    if (terminal != null) return terminal;
+    final maximizing = state.currentPlayer == rootPlayer;
+    final checked = _engine.isInCheck(state, state.currentPlayer);
+    final staticScore = _evaluate(state);
+    if (remaining == 0) return staticScore;
+    var best = checked
+        ? (maximizing ? double.negativeInfinity : double.infinity)
+        : staticScore;
+    if (!checked) {
+      if (maximizing) {
+        if (best >= beta) return best;
+        alpha = max(alpha, best);
+      } else {
+        if (best <= alpha) return best;
+        beta = min(beta, best);
+      }
+    }
+    final tactical = checked
+        ? moves
+        : moves.where((move) => move.isCapture).toList();
+    for (final move in _orderedMoves(state, tactical)) {
+      final child = _advanceForSearch(state, move);
+      final score = _quiescence(
+        child,
+        _engine.allLegalMoves(child, child.currentPlayer),
+        alpha,
+        beta,
+        ply + 1,
+        remaining - 1,
+      );
+      if (maximizing) {
+        best = max(best, score);
+        alpha = max(alpha, best);
+      } else {
+        best = min(best, score);
+        beta = min(beta, best);
+      }
+      if (alpha >= beta) break;
+    }
     return best;
   }
 
@@ -209,13 +262,6 @@ class _AiSearch {
   }
 
   double _evaluate(GameState state) {
-    final terminal = _terminalScore(
-      state,
-      0,
-      _engine.allLegalMoves(state, state.currentPlayer),
-    );
-    if (terminal != null) return terminal;
-
     var score = 0.0;
     var rootMobility = 0;
     var enemyMobility = 0;
@@ -294,6 +340,10 @@ class _AiSearch {
     final entries =
         moves.map((move) {
           var score = _capturedMaterial(state, move) * 12.0;
+          score -= move.isCapture
+              ? (_engine.pieceById(state, move.pieceId)?.type.aiValue ?? 0) *
+                    0.1
+              : 0;
           for (final id in move.captures) {
             final captured = _engine.pieceById(state, id);
             if (captured?.type == PieceType.cross) score += mateScore;
@@ -313,7 +363,7 @@ class _AiSearch {
               ? b.score.compareTo(a.score)
               : a.score.compareTo(b.score),
         );
-    return entries.map((entry) => entry.move).toList(growable: false);
+    return entries.map((entry) => entry.move).toList();
   }
 
   GameState _advanceForSearch(GameState state, GameMove move) {
@@ -350,4 +400,11 @@ class _SearchResult {
 
   final GameMove? move;
   final double score;
+}
+
+class _SearchEntry {
+  const _SearchEntry(this.score, this.bound);
+  final double score;
+  // -1: upper bound, 0: exact, 1: lower bound.
+  final int bound;
 }

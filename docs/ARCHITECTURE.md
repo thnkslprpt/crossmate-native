@@ -33,7 +33,7 @@ lib/
 
 ## AI
 
-The AI receives a serialized state through Flutter `compute`, so search does not block touch animation on the UI isolate. Easy uses noisy tactical ranking. Normal uses two-ply alpha-beta. Hard uses iterative search up to four plies with a time budget.
+The AI receives a serialized state through Flutter `compute`, so search does not block touch animation on the UI isolate. The five levels are Beginner, Casual, Challenging, Expert, and Master. Beginner usually chooses randomly from legal moves. The other levels use iterative alpha-beta search with depth limits of 2, 4, 6, and 8 plies and respective time budgets of 450, 1400, 2800, and 5000 milliseconds. Expert and Master extend leaf positions through captures and check evasions for up to three more plies. Search reuses bounded transposition results and retains the last fully completed iteration when time expires. Actual depth depends on the position and device. The stored names easy, normal, and hard remain compatible with existing preferences.
 
 ## Online play
 

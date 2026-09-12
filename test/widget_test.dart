@@ -94,6 +94,54 @@ void main() {
     expect(controller.state!.currentPlayer, 2);
   });
 
+  testWidgets('rotation popup cancels without using a turn', (tester) async {
+    final controller = CrossmateController();
+    addTearDown(controller.dispose);
+    await controller.startLocal(startingPlayer: 1);
+    await tester.pumpWidget(
+      MaterialApp(home: GameScreen(controller: controller)),
+    );
+    final triangle = controller.state!.pieces.firstWhere(
+      (p) => p.player == 1 && p.type == PieceType.triangle,
+    );
+    controller.tapCell(triangle.row, triangle.col);
+    controller.tapCell(triangle.row, triangle.col);
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsNothing);
+    expect(controller.pendingTriangleMoves, isEmpty);
+    expect(controller.state!.moveNumber, 0);
+    expect(controller.state!.currentPlayer, 1);
+  });
+
+  testWidgets('robot setup offers all five levels and starts Master', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'crossmate-seen-tutorial': true});
+    final controller = CrossmateController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(home: HomeScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Play the robot'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<AiDifficulty>));
+    await tester.pumpAndSettle();
+    for (final level in AiDifficulty.values) {
+      expect(find.text(level.label), findsWidgets);
+    }
+    await tester.tap(find.text('5 · Master').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start match'));
+    await tester.pumpAndSettle();
+    expect(controller.aiDifficulty, AiDifficulty.master);
+    expect(await controller.settings.loadDifficulty(), AiDifficulty.master);
+    expect(find.byType(GameScreen), findsOneWidget);
+  });
+
   testWidgets('triangle uses the same square housing as back-row pieces', (
     tester,
   ) async {
